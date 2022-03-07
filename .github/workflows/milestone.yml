@@ -1,0 +1,56 @@
+name: Create Milestone
+
+on:
+  schedule:
+    - cron: "0 17 * * *"
+
+jobs:
+  create-milestone:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v4
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            // https://octokit.github.io/rest.js/v18#issues-list-milestones
+            const milestones = await github.issues.listMilestones({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sort: "due_on",
+              direction: "desc",
+              state: "open",
+            })
+
+            // マイルストーンのタイトルが日付のもので最新のものを取得してくる(チームルール)
+            const milestone = milestones.data.find(({ title }) => title.match(/^\d{4}-\d{2}-\d{2}$/)) || null
+
+            if (!milestone) {
+              console.log("マイルストーンが取得できませんでした")
+              return
+            }
+
+            const date = new Date(milestone.due_on)
+
+            // 最新のマイルストーンのリリース日の4日前に次マイルストーンを作成
+            const baseDate = new Date()
+            baseDate.setDate(baseDate.getDate() + 4)
+
+            if (date.getTime() > baseDate.getTime()) {
+              return
+            }
+
+            date.setDate(date.getDate() + 14)
+            date.setHours(9)
+            const dueOn = date.toISOString()
+            const month = ("00" + (date.getMonth() + 1)).slice(-2)
+            const day = ("00" + date.getDate()).slice(-2)
+            const releaseDate = date.getFullYear() + "-" + month + "-" + day
+
+            // https://octokit.github.io/rest.js/v18#issues-create-milestone
+            github.issues.createMilestone({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: releaseDate,
+              due_on: dueOn,
+              description: "定期リリース"
+            })
