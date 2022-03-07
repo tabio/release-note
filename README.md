@@ -1,3 +1,4 @@
 # release-note
 
-release-drafterを利用したリリースノート管理サンプル
+1. release-drafterでリリースノートの自動生成
+2. 最新のリリースノートをGitHub APIを使って各リポジトリから収集
